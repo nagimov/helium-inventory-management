@@ -41,7 +41,7 @@ purchased_dewar_storage = np.zeros((inputs.N_dewars_purchased_max, total_steps),
 purchased_dewar_state_logbook = {}
 
 # cmms_states indicates if cmms is off (-1) or number of the dewar feeding it minus one
-# numbers higher 100 indicate a purchased dewar, e.g. 100 - first purchased dewar. 101 - second purchased dewar
+# numbers higher then 100 indicate a purchased dewar, e.g. 100 - first purchased dewar. 101 - second purchased dewar
 cmms_state = np.zeros((total_cmms, total_steps), dtype=int)
 cmms_state_logbook = []
 
@@ -51,6 +51,7 @@ ucn_state = np.zeros(total_steps,
 
 
 def change_dewar_state(dewar, new_state, step):
+    # changes the state of specified dewar and marks it as "low" if it's below the threshold level
     if dewar < 100:
         for ds in dewar_state.dtype.names:
             dewar_state[ds][dewar][step] = False
@@ -71,7 +72,7 @@ def log_linde_state(step):
 
 
 def log_dewar_state(step):
-    # logs which linde states changed and when
+    # logs which dewar states changed and when
     for d in dewars_list:
         for s in dewar_state.dtype.names:
             if dewar_state[s][d][step] and not dewar_state[s][d][step-1]:
@@ -83,7 +84,7 @@ def log_dewar_state(step):
 
 
 def log_cmms_state(step):
-    # logs which linde states changed and when
+    # logs which cmms states changed and when
     for c in cmms_list:
         if cmms_state[c][step] != cmms_state[c][step-1]:
             state_from = cmms_state[c][step-1]
@@ -97,7 +98,7 @@ def log_cmms_state(step):
 
 
 def calc_dewar_fill_rate(step, d):
-    # returns amount landed to the dewar
+    # returns amount landed into the portable dewar considering it's warm/cold state
     if not dewar_state['fill'][d][step]:
         quit_iteration(step, 'dewar thinks it is being filled while linde disagrees')
     cooldown_time = 0.0
@@ -137,6 +138,7 @@ def op_linde(step):
         production = calc_linde_production(step) * dt
         linde_storage['hp'][step] -= production
         linde_storage['dewar'][step] += production
+    # evaporation from main dewar when linde is off
     else:
         dewar_loss = min(linde_storage['dewar'][step], inputs.m_linde_dewar_loss * dt)  # cannot loose more than have
         linde_storage['dewar'][step] -= dewar_loss
@@ -164,7 +166,7 @@ def op_linde(step):
     if linde_state['transfer_trickle'][step]:
         linde_storage['dewar'][step] -= inputs.m_transfer_line_trickle * dt
         linde_storage['bag'][step] += inputs.m_transfer_line_trickle * dt
-    # venting from the bag if it's too full
+    # venting from the bag if it's too full and recording the losses
     if linde_storage['bag'][step] > inputs.M_bag_max:
         linde_storage['loss'][step] += linde_storage['bag'][step] - inputs.M_bag_max
         linde_storage['bag'][step] = inputs.M_bag_max
@@ -289,6 +291,7 @@ def set_ucn_states(step):
 
 
 def purchase_dewar(step):
+    # adjusts total number of purchased dewars, "fills up" one purchased dewar and returns its number
     if dewars_purchased.value >= inputs.N_dewars_purchased_max:
         quit_iteration(step, 'stop buying dewars already')
     purchased_dewar_storage[dewars_purchased.value][step] = inputs.M_portable_dewar_full
