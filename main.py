@@ -576,6 +576,7 @@ def initialize_charts():
     global fig, ax
     fig, ax = plt.subplots(len(linde_storage.dtype.names)+2, sharex=True)
     plt.tight_layout()
+    plt.xlabel('time [days]')
     for i, s in enumerate(linde_storage.dtype.names):
         ax[i].set_title(s)
         charts[s], = ax[i].plot([], [], linewidth=0.5)
