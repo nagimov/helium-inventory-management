@@ -1,0 +1,3 @@
+pytz>=2020.1
+numpy>=1.18
+matplotlib>=3.2
