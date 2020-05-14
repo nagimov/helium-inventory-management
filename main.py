@@ -302,7 +302,7 @@ def purchase_dewar(step):
 
 
 def set_cmms_states(step):
-    taken_dewars = []
+    dewars_needed = []
     for cmms in cmms_list:
         if is_this_thing_on(step, cmms):  # cmms runs according to schedule
             need_dewar = True
@@ -318,33 +318,28 @@ def set_cmms_states(step):
                     if purchased_dewar_storage[dewar_connected-100][step-1] > inputs.M_portable_dewar_min:
                         need_dewar = False
             if need_dewar:
-                # find next available dewar from storage
-                ready_dewars = find_ready_dewars_now(step-1)
-                # if no dewars available, purchase one
-                if len(ready_dewars) == 0:
-                    ready_dewars.append(purchase_dewar(step))
-                # attach fullest available dewar to cmms that hasn't been attached at current step already
-                # some cmms experiments take two dewars when they start running
-                dewar_to_take = -1
-                for d in ready_dewars:
-                    if d not in taken_dewars:
-                        dewar_to_take = d
-                        taken_dewars.append(d)
-                        break
-                # if no dewars available, purchase one
-                if dewar_to_take == -1:
-                    dewar_to_take = ready_dewars.append(purchase_dewar(step))
-                cmms_state[cmms][step] = dewar_to_take
-                change_dewar_state(dewar_to_take, 'cmms', step)
-                # if cmms had dewar connected, return it
-                if dewar_connected != -1:
-                    change_dewar_state(dewar_connected, 'low', step)
+                dewars_needed.append(cmms)
         else:  # cmms doesn't run according to schedule
             cmms_state[cmms][step] = -1
             # if dewar is attached, return it
             dewar_connected = cmms_state[cmms][step-1]
             if dewar_connected != -1:
                 change_dewar_state(dewar_connected, 'store', step)
+    if len(dewars_needed) > 0:
+        # find available dewars from storage
+        ready_dewars = find_ready_dewars_now(step-1)
+        dewars_available = len(ready_dewars)
+        # if not enough dewars available, purchase some
+        for _ in range(len(dewars_needed) - dewars_available):
+            ready_dewars.append(purchase_dewar(step))
+        for cmms, dewar in zip(dewars_needed, ready_dewars):
+            # if cmms had dewar connected, return it
+            dewar_connected = cmms_state[cmms][step-1]
+            if dewar_connected != -1:
+                change_dewar_state(dewar_connected, 'store', step)
+            # attach new dewar
+            cmms_state[cmms][step] = dewar
+            change_dewar_state(dewar, 'cmms', step)
 
 
 def find_ready_dewars_now(step):
