@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import hashlib
 import sys
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import thermophysical
@@ -611,6 +613,16 @@ def update_charts(step):
     plt.pause(0.1)
 
 
+def hash_results(ndarrays):
+    # logs md5 hashes of final ndarrays
+    with open('results.md5', 'w') as f:
+        f.write(f'{time.time()}\n')
+        for a in ndarrays:
+            name = [k for k in globals() if globals()[k] is a][0]
+            md5 = hashlib.md5(a).hexdigest()
+            f.write(f'{name}: {md5}\n')
+
+
 if __name__ == "__main__":
 
     initialize()
@@ -640,3 +652,5 @@ if __name__ == "__main__":
             update_charts(i)
 
     plt.savefig('plot.png')
+
+    hash_results([linde_storage, linde_state, dewar_storage, dewar_state, purchased_dewar_storage, cmms_state, ucn_state])
