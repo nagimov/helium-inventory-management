@@ -40,9 +40,7 @@ p_hp_storage_max_psi = 3600  # max allowed pressure in hp storage [psi]
 p_hp_storage_min_psi = 500  # min allowed pressure in hp storage [psi]
 m_hp_compressor = 4.08e-3 / 3  # total flow of recovery compressors per each compressor [kg/s]
 V_hp_storage_cu_ft = 45.9 * 9  # total volume of impure hp storage [ft^3]
-V_hp_storage = V_hp_storage_cu_ft * 0.0283168  # total volume of impure hp storage [m^3]
 V_bag_max_cu_ft = 1500  # max volume of the bag [ft^3]
-V_bag_max = V_bag_max_cu_ft * 0.0283168  # max volume of the bag [m^3]
 x_bag_setpoint_high_1 = 0.70  # high setpoint of bag volume for hp compressor 1
 x_bag_setpoint_high_2 = 0.75  # high setpoint of bag volume for hp compressor 2
 x_bag_setpoint_high_3 = 0.80  # high setpoint of bag volume for hp compressor 3
@@ -52,6 +50,8 @@ x_bag_setpoint_low_3 = 0.35  # low setpoint of bag volume for hp compressor 3
 # hp & lp storage calcs
 p_hp_storage_max = p_hp_storage_max_psi * 6894.76  # max allowed pressure in hp storage [Pa]
 p_hp_storage_min = p_hp_storage_min_psi * 6894.76  # min allowed pressure in hp storage [Pa]
+V_hp_storage = V_hp_storage_cu_ft * 0.0283168  # total volume of impure hp storage [m^3]
+V_bag_max = V_bag_max_cu_ft * 0.0283168  # max volume of the bag [m^3]
 M_hp_storage_max = V_hp_storage * d_from_p_t(p_hp_storage_max, T_env)  # max amount of gas in hp storage [kg]
 M_hp_storage_min = V_hp_storage * d_from_p_t(p_hp_storage_min, T_env)  # min amount of gas in hp storage [kg]
 d_bag = d_from_p_t(p_atm, T_env)  # density of helium in helium bag [kg/m^3]
@@ -73,7 +73,7 @@ M_portable_dewar_min = V_portable_dewar_min_L * 1e-3 * d_portable_dewar  # full 
 M_portable_dewar_topup = V_portable_dewar_topup_L * 1e-3 * d_portable_dewar  # threshold for top up [kg]
 # m_portable_dewar_loss: loss rate from portable dewars [kg/s]
 m_portable_dewar_loss = x_portable_dewar_loss_day * M_portable_dewar_full / 24 / 3600
-# m_portable_dewar_cooldown: amount of helium required to cool down dewar from warm state [kg]
+# M_portable_dewar_cooldown: amount of helium required to cool down dewar from warm state [kg]
 M_portable_dewar_cooldown = V_portable_dewar_cooldown_L * 1e-3 * d_portable_dewar  # cool down amount [kg]
 
 # ucn source cryostat data
