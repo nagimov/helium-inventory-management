@@ -25,6 +25,7 @@ x_linde_production_transfer = 10.0 / 100  # reduction of production during trans
 x_linde_dewar_fill_loss = 20.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
 v_dewar_fill_run_L_hr = 85  # dewar fill flow rate while linde is running [L/hr]
 v_dewar_fill_off_L_hr = 115  # dewar fill flow rate while linde is off [L/hr]
+m_linde_loss_g_s = 0.01  # rate of helium loss when liquefier is running [g/s]
 # liquefier calcs
 d_linde_dewar = d_from_p_sl(p_linde_dewar)  # density of liquid in the dewar [kg/m^3]
 m_linde_dewar = v_linde_dewar_L_hr * 1e-3 / 3600 * d_linde_dewar  # production rate [kg/s]
@@ -37,6 +38,7 @@ m_dewar_fill_run = v_dewar_fill_run_L_hr * 1e-3 * d_linde_dewar / 3600  # dewar 
 m_dewar_fill_off = v_dewar_fill_off_L_hr * 1e-3 * d_linde_dewar / 3600  # dewar fill flow rate [L/hr]
 m_dewar_fill_loss_run = x_linde_dewar_fill_loss * m_dewar_fill_run  # dewar fill losses while linde is running [kg/s]
 m_dewar_fill_loss_off = x_linde_dewar_fill_loss * m_dewar_fill_off  # dewar fill losses while linde is off [kg/s]
+m_linde_loss = m_linde_loss_g_s * 1e-3  # rate of helium loss when liquefier is running [kg/s]
 
 # hp & lp storage data
 p_hp_storage_max_psi = 3600  # max allowed pressure in hp storage [psi]

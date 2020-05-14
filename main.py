@@ -145,9 +145,10 @@ def calc_linde_production(step):
 def op_linde(step):
     # liquefaction
     if linde_state['run'][step]:
-        production = calc_linde_production(step) * dt
-        linde_storage['hp'][step] -= production
-        linde_storage['dewar'][step] += production
+        production = calc_linde_production(step)
+        linde_storage['hp'][step] -= (production + inputs.m_linde_loss) * dt
+        linde_storage['dewar'][step] += production * dt
+        linde_storage['loss'][step] += inputs.m_linde_loss * dt
     # evaporation from main dewar when linde is off
     else:
         dewar_loss = min(linde_storage['dewar'][step], inputs.m_linde_dewar_loss * dt)  # cannot loose more than have
@@ -247,6 +248,7 @@ def initialize():  # init the world
     linde_storage['dewar'][0] = 0.05 * thermophysical.d_from_p_sl(130000)
     linde_storage['bag'][0] = 0.0
     linde_storage['ucn'][0] = 0.0
+    linde_storage['loss'][0] = 0.0
     # turn off all cmms experiments
     for cmms in cmms_list:
         cmms_state[cmms][0] = -1
