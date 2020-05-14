@@ -10,7 +10,7 @@ from thermophysical import p_atm, \
     r_from_p_sl
 
 # liquefier data
-v_linde_dewar_L_hr = 75  # production rate [L/hr]
+v_linde_dewar_L_hr = 80  # production rate [L/hr]
 p_linde_dewar_gauge_psi = 3.2  # pressure in the dewar [psi gauge]
 p_linde_dewar = 101325 + p_linde_dewar_gauge_psi * 6894.76  # pressure in the dewar [Pa]
 t_rampup_linde_cold = 3 * 3600  # time required to ramp linde production from cold state [s]
@@ -23,7 +23,8 @@ V_linde_dewar_start_L = 500  # threshold of dewar level for NOT starting linde i
 x_linde_dewar_loss_day = 0.5 / 100  # dewar liquid helium loss per day
 x_linde_production_transfer = 10.0 / 100  # reduction of production during transfers
 x_linde_dewar_fill_loss = 20.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
-v_dewar_fill_L_hr = 85  # dewar fill flow rate [L/hr]
+v_dewar_fill_run_L_hr = 85  # dewar fill flow rate while linde is running [L/hr]
+v_dewar_fill_off_L_hr = 115  # dewar fill flow rate while linde is off [L/hr]
 # liquefier calcs
 d_linde_dewar = d_from_p_sl(p_linde_dewar)  # density of liquid in the dewar [kg/m^3]
 m_linde_dewar = v_linde_dewar_L_hr * 1e-3 / 3600 * d_linde_dewar  # production rate [kg/s]
@@ -32,8 +33,10 @@ M_linde_dewar_max = V_linde_dewar_max_L * 1e-3 * d_linde_dewar  # max amount in 
 # M_linde_dewar_start: threshold of dewar level for NOT starting linde if it's not running [kg]
 M_linde_dewar_start = V_linde_dewar_start_L * 1e-3 * d_linde_dewar
 m_linde_dewar_loss = M_linde_dewar_max * x_linde_dewar_loss_day / 24 / 3600  # dewar evap rate [kg/s]
-m_dewar_fill = v_dewar_fill_L_hr * 1e-3 * d_linde_dewar / 3600  # dewar fill flow rate [L/hr]
-m_dewar_fill_loss = x_linde_dewar_fill_loss * m_dewar_fill  # losses while filling dewars [kg/s]
+m_dewar_fill_run = v_dewar_fill_run_L_hr * 1e-3 * d_linde_dewar / 3600  # dewar fill flow rate [L/hr]
+m_dewar_fill_off = v_dewar_fill_off_L_hr * 1e-3 * d_linde_dewar / 3600  # dewar fill flow rate [L/hr]
+m_dewar_fill_loss_run = x_linde_dewar_fill_loss * m_dewar_fill_run  # dewar fill losses while linde is running [kg/s]
+m_dewar_fill_loss_off = x_linde_dewar_fill_loss * m_dewar_fill_off  # dewar fill losses while linde is off [kg/s]
 
 # hp & lp storage data
 p_hp_storage_max_psi = 3600  # max allowed pressure in hp storage [psi]
@@ -110,7 +113,7 @@ parse_time = lambda x: triumf_tz.localize(datetime.strptime(x, '%Y-%m-%d %H:%M:%
 
 # iteration data
 timestep = 60  # timestep for iteration [s]
-start_time = parse_time('2027-04-04 00:00:00')  # starting time in YYYY-MM-DD HH:MM:SS format
+start_time = parse_time('2027-04-01 00:00:00')  # starting time in YYYY-MM-DD HH:MM:SS format
 end_time = parse_time('2027-12-31 23:59:59')  # end time in YYYY-MM-DD HH:MM:SS format
 prediction_window = 5 * 24 * 3600  # period for predicting future use and making operational decisions [s]
 

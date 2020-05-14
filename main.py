@@ -33,6 +33,7 @@ linde_state = np.zeros(total_steps,
 linde_state_logbook = {}
 
 dewar_storage = np.zeros((inputs.N_dewars, total_steps), dtype=float)
+dewar_cooldown = np.zeros(inputs.N_dewars, dtype=float)
 dewar_state = np.zeros((inputs.N_dewars, total_steps),
     dtype={'names': ['warm', 'store', 'low', 'fill', 'cmms'],
          'formats': [bool,   bool,    bool,  bool,   bool]}
@@ -59,6 +60,9 @@ def change_dewar_state(dewar, new_state, step):
             dewar_state[ds][dewar][step] = False
         if new_state == 'store' and dewar_storage[dewar][step] < inputs.M_portable_dewar_topup:
             new_state = 'low'
+        # when dewar becomes "warm", amount of LHe required for cooldown is set
+        if new_state == 'warm':
+            dewar_cooldown[dewar] = -inputs.M_portable_dewar_cooldown
         dewar_state[new_state][dewar][step] = True
 
 
@@ -99,20 +103,24 @@ def log_cmms_state(step):
             print(f'cmms {c} state change: from dewar {state_from} to dewar {state_to}')
 
 
-def calc_dewar_fill_rate(step, d):
-    # returns amount landed into the portable dewar considering it's warm/cold state
+def calc_dewar_fill(step, d):
+    # returns amount landed into the portable dewar and losses to the bag considering dewar's warm/cold state
     if not dewar_state['fill'][d][step]:
         quit_iteration(step, 'dewar thinks it is being filled while linde disagrees')
-    cooldown_time = 0.0
-    if f'{d}_fill_0' not in dewar_state_logbook:  # if dewar never been filled before it's warm
-        cooldown_time = inputs.M_portable_dewar_cooldown / inputs.m_dewar_fill
-    elif f'{d}_warm_0' in dewar_state_logbook:  # if was warmed up before
-        if dewar_state_logbook[f'{d}_fill_1'] - dewar_state_logbook[f'{d}_warm_0'] == 1:  # if fill started after warmup
-            cooldown_time = inputs.M_portable_dewar_cooldown / inputs.m_dewar_fill
-    started = dewar_state_logbook[f'{d}_fill_1']
-    if timestamps[step] - timestamps[started] >= cooldown_time:
-        return inputs.m_dewar_fill
-    return 0.0
+    # define how much is being pushed from main dewar
+    if linde_state['run'][step]:
+        transfer_to_dewar = inputs.m_dewar_fill_run
+        losses_to_bag = inputs.m_dewar_fill_loss_run
+    else:
+        transfer_to_dewar = inputs.m_dewar_fill_off
+        losses_to_bag = inputs.m_dewar_fill_loss_off
+    # if cooldown amount wasn't delivered, dewar is still "warm"
+    if dewar_cooldown[d] < 0:
+        print(d, dewar_cooldown[d])
+        dewar_cooldown[d] += transfer_to_dewar * dt
+        return 0, transfer_to_dewar + losses_to_bag
+    else:
+        return transfer_to_dewar, losses_to_bag
 
 
 def calc_linde_production(step):
@@ -154,12 +162,10 @@ def op_linde(step):
                 break
         if filling_dewar_num == -1:
             quit_iteration(step, 'linde thinks it is filling the dewar but all dewars disagree')
-        from_main_dewar = (inputs.m_dewar_fill + inputs.m_dewar_fill_loss) * dt
-        to_portable_dewar = calc_dewar_fill_rate(step, filling_dewar_num) * dt
-        assert from_main_dewar >= to_portable_dewar
-        linde_storage['dewar'][step] -= from_main_dewar
-        linde_storage['bag'][step] += from_main_dewar - to_portable_dewar
-        dewar_storage[filling_dewar_num][step] += to_portable_dewar
+        to_portable_dewar, to_bag = calc_dewar_fill(step, filling_dewar_num)
+        dewar_storage[filling_dewar_num][step] += to_portable_dewar * dt
+        linde_storage['bag'][step] += to_bag * dt
+        linde_storage['dewar'][step] -= (to_portable_dewar + to_bag) * dt
     # filling ucn cryostat
     if linde_state['transfer'][step]:
         linde_storage['dewar'][step] -= (inputs.m_transfer_line + inputs.m_transfer_line_loss) * dt
@@ -438,7 +444,10 @@ def set_dewar_states(step):
                 change_dewar_state(d, 'low', step)
         # if dewar goes to 0, it warms up
         if dewar_storage[d][step-1] < 0:
-            change_dewar_state(d, 'warm', step)
+            # only if it isn't being filled already, since cooldown is a fill at zero level
+            # if fill was interrupted during cooldown, cooldown will need to start again
+            if not dewar_state['fill'][d][step-1]:
+                change_dewar_state(d, 'warm', step)
 
 
 def set_hp_compressor_states(step):
