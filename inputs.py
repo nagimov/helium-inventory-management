@@ -10,7 +10,7 @@ from thermophysical import p_atm, \
     r_from_p_sl
 
 # liquefier data
-v_linde_dewar_L_hr = 80  # production rate [L/hr]
+v_linde_dewar_L_hr = 75  # production rate [L/hr]
 p_linde_dewar_gauge_psi = 3.2  # pressure in the dewar [psi gauge]
 p_linde_dewar = 101325 + p_linde_dewar_gauge_psi * 6894.76  # pressure in the dewar [Pa]
 t_rampup_linde_cold = 3 * 3600  # time required to ramp linde production from cold state [s]
