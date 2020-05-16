@@ -494,14 +494,17 @@ def set_linde_states(step):
                             if dewar_state['fill'][d][step-1]:
                                 change_dewar_state(d, 'store', step)
                                 break
-            # if not transferring or filling now and need to fill portable dewar
+            # if not transferring or filling now
             if not linde_state[step]['transfer'] and not linde_state[step]['filling']:
-                if we_need_more_dewars(step-1, inputs.prediction_window):
-                    d = next_dewar_to_fill_future(step-1, inputs.prediction_window)
-                    # if all dewars are busy, wait for empty one to appear
-                    if len(d) > 0:
-                        linde_state['filling'][step] = True
-                        change_dewar_state(d[0], 'fill', step)
+                # and have enough liquid in main dewar
+                if linde_storage['dewar'][step] > inputs.M_linde_dewar_fill_ok:
+                    # and need to fill a portable dewar
+                    if we_need_more_dewars(step-1, inputs.prediction_window):
+                        d = next_dewar_to_fill_future(step-1, inputs.prediction_window)
+                        # then start filling
+                        if len(d) > 0:  # if all dewars are busy, wait for empty one to appear
+                            linde_state['filling'][step] = True
+                            change_dewar_state(d[0], 'fill', step)
         # if transferring, check if ucn is full
         if linde_state[step-1]['transfer']:
             if linde_storage['ucn'][step-1] > inputs.M_ucn_4K_max:

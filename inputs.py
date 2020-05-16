@@ -80,6 +80,8 @@ M_portable_dewar_topup = V_portable_dewar_topup_L * 1e-3 * d_portable_dewar  # t
 m_portable_dewar_loss = x_portable_dewar_loss_day * M_portable_dewar_full / 24 / 3600
 # M_portable_dewar_cooldown: amount of helium required to cool down dewar from warm state [kg]
 M_portable_dewar_cooldown = V_portable_dewar_cooldown_L * 1e-3 * d_portable_dewar  # cool down amount [kg]
+# M_linde_dewar_fill_ok: minimal required level in main dewar to start a fill
+M_linde_dewar_fill_ok = M_linde_dewar_min + M_portable_dewar_topup
 
 # ucn source cryostat data
 m_ucn_static_g_s = 0.573 + 0.06  # flow rate from only static heat load (4K + 1K pots) [g/s]
