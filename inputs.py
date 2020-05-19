@@ -92,6 +92,8 @@ P_transfer_misc = 1 + 0.5  # heat load from valves, field joints, etc. [W]
 p_ucn_4K = 101325  # pressure in the 4K pot of ucn source
 V_ucn_4K_min_L = 100  # min level in UCN cryostat [L]
 V_ucn_4K_max_L = 180  # max level in UCN cryostat [L]
+x_ucn_cooldown = 1.5  # ucn consumption factor during cooldown
+t_ucn_cooldown_hrs = 72  # ucn cryostat cooldown period [hr]
 # ucn source cryostat calcs
 d_ucn_4K = d_from_p_sl(p_ucn_4K)  # density of liquid in ucn 4K pot [kg/m^3]
 M_ucn_4K_min = V_ucn_4K_min_L * 1e-3 * d_ucn_4K  # min level in UCN cryostat [kg]
@@ -110,6 +112,7 @@ m_vapor_ucn_4K_Q = P_transfer_total / q_latent_transfer_line  # helium vapor gen
 m_transfer_line_loss = m_vapor_ucn_4K_Q + x_vapor_ucn_4K_JT * m_transfer_line  # total vapor generated [kg/s]
 x_transfer_line_loss = m_transfer_line_loss / m_transfer_line  # fractional loss in transfer line
 m_transfer_line_trickle = m_transfer_line_loss  # minimal flow to keep transfer line cold [kg/s]
+t_ucn_cooldown = t_ucn_cooldown_hrs * 3600  # ucn cryostat cooldown period [s]
 
 # timezone and conversions
 triumf_tz = timezone('America/Vancouver')
@@ -124,6 +127,7 @@ prediction_window = 5 * 24 * 3600  # period for predicting future use and making
 # schedule tuples: [(start, stop), (start, stop), ... ]
 # dewar 1 is 0, dewar 2 is 1, etc.
 schedule = {}
+# make sure beam doesn't start for at least t_ucn_cooldown period after ucn starts running
 schedule['ucn_source'] = [(parse_time('2027-04-01 08:00:00'), parse_time('2027-12-18 20:00:00'))]
 schedule['ucn_beam'] = [(parse_time('2027-04-27 08:00:00'), parse_time('2027-09-30 20:00:00')),
                         (parse_time('2027-10-15 08:00:00'), parse_time('2027-12-17 20:00:00')),]

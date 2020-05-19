@@ -51,6 +51,7 @@ cmms_state_logbook = []
 ucn_state = np.zeros(total_steps,
     dtype={'names': ['static', 'beam'],
          'formats': [bool,     bool]})
+ucn_state_logbook = {}
 
 
 def change_dewar_state(dewar, new_state, step):
@@ -89,6 +90,17 @@ def log_dewar_state(step):
                 print(f'dewar {d} state change: "{s}" from 1 to 0')
 
 
+def log_ucn_state(step):
+    # logs which ucn states changed and when
+    for s in ucn_state.dtype.names:
+        if ucn_state[s][step] and not ucn_state[s][step-1]:
+            ucn_state_logbook[f'{s}_1'] = step
+            print(f'ucn state change: "{s}" from 0 to 1')
+        elif not ucn_state[s][step] and ucn_state[s][step-1]:
+            ucn_state_logbook[f'{s}_0'] = step
+            print(f'ucn state change: "{s}" from 1 to 0')
+
+
 def log_cmms_state(step):
     # logs which cmms states changed and when
     for c in cmms_list:
@@ -121,6 +133,19 @@ def calc_dewar_fill(step, d):
         return 0, transfer_to_dewar + losses_to_bag
     else:
         return transfer_to_dewar, losses_to_bag
+
+
+def calc_ucn_load(step):
+    # returns static heat load of ucn cryostat considering cooldown mode
+    assert ucn_state['static'][step]  # make sure ucn is at static heat load
+    started = ucn_state_logbook['static_1']
+    since_start = timestamps[step] - timestamps[started]
+    load_mult = 1.0
+    if since_start < inputs.t_ucn_cooldown:  # if in cooldown mode
+        if ucn_state['beam'][step]:  # if trying to run beam while in cooldown mode
+            quit_iteration(step, 'trying to run beam to ucn in cooldown mode')
+        load_mult = inputs.x_ucn_cooldown
+    return load_mult * inputs.m_ucn_static
 
 
 def calc_linde_production(step):
@@ -201,7 +226,7 @@ def op_hp_compressors(step):
 def op_ucn(step):
     # evaporation from heat loads
     if ucn_state['static'][step]:
-        ucn_flow = inputs.m_ucn_static * dt
+        ucn_flow = calc_ucn_load(step) * dt
         linde_storage['ucn'][step] -= ucn_flow
         linde_storage['bag'][step] += ucn_flow
     if ucn_state['beam'][step]:
@@ -648,6 +673,7 @@ if __name__ == "__main__":
         set_linde_states(i)
         log_linde_state(i)
         log_dewar_state(i)
+        log_ucn_state(i)
         log_cmms_state(i)
         op_hp_compressors(i)
         op_linde(i)
