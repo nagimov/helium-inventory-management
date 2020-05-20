@@ -87,8 +87,8 @@ M_linde_dewar_fill_ok = M_linde_dewar_min + M_portable_dewar_topup
 m_ucn_static_g_s = 0.573 + 0.06  # flow rate from only static heat load (4K + 1K pots) [g/s]
 m_ucn_beam_g_s = 0.443 + 0.303  # flow rate from only beam loading (4K + 1K pots) [g/s]
 v_transfer_line_L_hr = 70  # flow rate through the transfer line as seen from linde dewar [L/hr]
-P_transfer_line = 0.15 * 40  # heat load to the transfer line [W/m * m = W]
-P_transfer_misc = 1 + 0.5  # heat load from valves, field joints, etc. [W]
+P_transfer_line = 1.8  # heat load to the transfer line [W]
+P_transfer_misc = 0.35 + 1  # heat load from valves, field joints, etc. [W]
 p_ucn_4K = 101325  # pressure in the 4K pot of ucn source
 V_ucn_4K_min_L = 100  # min level in UCN cryostat [L]
 V_ucn_4K_max_L = 180  # max level in UCN cryostat [L]
