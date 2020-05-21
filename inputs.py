@@ -10,7 +10,7 @@ from thermophysical import p_atm, \
     r_from_p_sl
 
 # liquefier data
-v_linde_dewar_L_hr = 70  # production rate [L/hr]
+v_linde_dewar_L_hr = 50  # production rate [L/hr]
 p_linde_dewar_gauge_psi = 3.2  # pressure in the dewar [psi gauge]
 p_linde_dewar = 101325 + p_linde_dewar_gauge_psi * 6894.76  # pressure in the dewar [Pa]
 t_rampup_linde_cold = 3 * 3600  # time required to ramp linde production from cold state [s]
@@ -63,7 +63,7 @@ d_bag = d_from_p_t(p_atm, T_env)  # density of helium in helium bag [kg/m^3]
 M_bag_max = V_bag_max * d_bag  # max amount of gas in the bag [kg]
 
 # portable dewars data
-N_dewars_purchased_max = 10  # max number of dewars to be purchased
+N_dewars_purchased_max = 100  # max number of dewars to be purchased
 N_dewars = 9  # total number of dewars
 p_portable_dewar = 101325  # pressure in portable dewars [Pa]
 x_portable_dewar_loss_day = 1.0 / 100  # liquid helium loss per day [-]
@@ -84,11 +84,11 @@ M_portable_dewar_cooldown = V_portable_dewar_cooldown_L * 1e-3 * d_portable_dewa
 M_linde_dewar_fill_ok = M_linde_dewar_min + M_portable_dewar_topup
 
 # ucn source cryostat data
-m_ucn_static_g_s = 0.573 + 0.06  # flow rate from only static heat load (4K + 1K pots) [g/s]
-m_ucn_beam_g_s = 0.443 + 0.303  # flow rate from only beam loading (4K + 1K pots) [g/s]
+m_ucn_static_g_s = 0.77  # flow rate from only static heat load (4K + 1K pots) [g/s]
+m_ucn_beam_g_s = 0.1 * 0.77  # flow rate from only beam loading (4K + 1K pots) [g/s]
 v_transfer_line_L_hr = 70  # flow rate through the transfer line as seen from linde dewar [L/hr]
-P_transfer_line = 1.8  # heat load to the transfer line [W]
-P_transfer_misc = 0.35 + 1  # heat load from valves, field joints, etc. [W]
+P_transfer_line = 6  # heat load to the transfer line [W]
+P_transfer_misc = 0  # heat load from valves, field joints, etc. [W]
 p_ucn_4K = 101325  # pressure in the 4K pot of ucn source
 V_ucn_4K_min_L = 100  # min level in UCN cryostat [L]
 V_ucn_4K_max_L = 180  # max level in UCN cryostat [L]
@@ -128,9 +128,12 @@ prediction_window = 5 * 24 * 3600  # period for predicting future use and making
 # dewar 1 is 0, dewar 2 is 1, etc.
 schedule = {}
 # make sure beam doesn't start for at least t_ucn_cooldown period after ucn starts running
-schedule['ucn_source'] = [(parse_time('2027-04-01 08:00:00'), parse_time('2027-12-18 20:00:00'))]
-schedule['ucn_beam'] = [(parse_time('2027-04-27 08:00:00'), parse_time('2027-09-30 20:00:00')),
-                        (parse_time('2027-10-15 08:00:00'), parse_time('2027-12-17 20:00:00')),]
+schedule['ucn_source'] = [(parse_time('2027-04-01 08:00:00'), parse_time('2027-05-01 20:00:00')),
+                          (parse_time('2027-06-01 08:00:00'), parse_time('2027-07-01 20:00:00')),
+                          (parse_time('2027-08-01 08:00:00'), parse_time('2027-09-01 20:00:00')),]
+schedule['ucn_beam'] = [(parse_time('2027-04-14 08:00:00'), parse_time('2027-04-30 20:00:00')),
+                        (parse_time('2027-06-14 08:00:00'), parse_time('2027-06-30 20:00:00')),
+                        (parse_time('2027-08-14 08:00:00'), parse_time('2027-08-30 20:00:00')),]
 schedule[0] = [(parse_time('2027-04-08 08:00:00'), parse_time('2027-08-22 20:00:00'))]
 schedule[1] = [(parse_time('2027-08-26 08:00:00'), parse_time('2027-09-27 20:00:00'))]
 schedule[2] = schedule[1]  # 2 and 3 operate together
