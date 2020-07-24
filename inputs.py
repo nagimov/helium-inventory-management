@@ -10,11 +10,11 @@ from thermophysical import p_atm, \
     r_from_p_sl
 
 # liquefier data
-v_linde_dewar_L_hr = 50  # production rate [L/hr]
+v_linde_dewar_L_hr = 54.4  # production rate [L/hr]
 p_linde_dewar_gauge_psi = 3.2  # pressure in the dewar [psi gauge]
 p_linde_dewar = 101325 + p_linde_dewar_gauge_psi * 6894.76  # pressure in the dewar [Pa]
-t_rampup_linde_cold = 3 * 3600  # time required to ramp linde production from cold state [s]
-t_rampup_linde_warm = 6 * 3600  # time required to ramp linde production from warm state [s]
+t_rampup_linde_cold = 1 * 3600  # time required to ramp linde production from cold state [s]
+t_rampup_linde_warm = 3 * 3600  # time required to ramp linde production from warm state [s]
 t_linde_warmup_threshold = 2 * 24 * 3600  # max off time after which full warmup needed
 t_linde_warmup = 2 * 24 * 3600  # full warmup time, in addition to the threshold
 V_linde_dewar_min_L = 100  # minimal level in the dewar [L]
@@ -22,9 +22,9 @@ V_linde_dewar_max_L = 900  # maximal level in the dewar [L]
 V_linde_dewar_start_L = 500  # threshold of dewar level for NOT starting linde if it's not running already [L]
 x_linde_dewar_loss_day = 0.5 / 100  # dewar liquid helium loss per day
 x_linde_production_transfer = 10.0 / 100  # reduction of production during transfers
-x_linde_dewar_fill_loss = 20.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
-v_dewar_fill_run_L_hr = 110  # dewar fill flow rate while linde is running [L/hr]
-v_dewar_fill_off_L_hr = 165  # dewar fill flow rate while linde is off [L/hr]
+x_linde_dewar_fill_loss = 47.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
+v_dewar_fill_run_L_hr = 79.2  # dewar fill flow rate while linde is running [L/hr]
+v_dewar_fill_off_L_hr = 120  # dewar fill flow rate while linde is off [L/hr]
 m_linde_loss_g_s = 0.01  # rate of helium loss when liquefier is running [g/s]
 # liquefier calcs
 d_linde_dewar = d_from_p_sl(p_linde_dewar)  # density of liquid in the dewar [kg/m^3]
