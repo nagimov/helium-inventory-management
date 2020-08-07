@@ -163,7 +163,9 @@ def calc_linde_production(step):
     # adjust production during transfers
     transfer_mult = 1.0
     if linde_state['transfer'][step]:
-        transfer_mult = 1.0 - inputs.x_linde_production_transfer
+        transfer_mult = 1.0 - inputs.x_linde_production_transfer_ucn
+    if linde_state['filling'][step]:
+        transfer_mult = 1.0 - inputs.x_linde_production_transfer_portable
     return inputs.m_linde_dewar * ramp_mult * transfer_mult
 
 
@@ -198,8 +200,10 @@ def op_linde(step):
         linde_storage['bag'][step] += inputs.m_transfer_line_loss * dt
         linde_storage['ucn'][step] += inputs.m_transfer_line * dt
     if linde_state['transfer_trickle'][step]:
-        linde_storage['dewar'][step] -= inputs.m_transfer_line_trickle * dt
-        linde_storage['bag'][step] += inputs.m_transfer_line_trickle * dt
+        # check if static load flow is enough to keep transfer line cold
+        extra_flow = max(inputs.m_transfer_line_trickle - inputs.m_ucn_static, 0)
+        linde_storage['dewar'][step] -= extra_flow * dt
+        linde_storage['bag'][step] += extra_flow * dt
     # venting from the bag if it's too full and recording the losses
     if linde_storage['bag'][step] > inputs.M_bag_max:
         linde_storage['loss'][step] += linde_storage['bag'][step] - inputs.M_bag_max
@@ -498,14 +502,14 @@ def set_linde_states(step):
     if linde_storage['dewar'][step-1] < inputs.M_linde_dewar_start:
         linde_state[step]['run'] = True
     # if main dewar is too low, disconnect all consumers
-    if linde_storage['dewar'][step-1] < inputs.M_linde_dewar_min:
+    if linde_storage['dewar'][step-1] < inputs.M_linde_dewar_min_safe:
         linde_state[step]['filling'] = False
         for d in dewars_list:
             if dewar_state['fill'][d][step-1]:
                 change_dewar_state(d, 'store', step)
                 break
         linde_state['transfer'][step] = False
-    else:  # enough helium in main dewar
+    elif linde_storage['dewar'][step-1] > inputs.M_linde_dewar_min_okay:  # enough helium in main dewar
         # if not transferring, see if transfers needed
         if not linde_state['transfer'][step-1]:
             # if ucn running and level low, start transfer - ucn gets the priority over portable dewars
@@ -613,7 +617,7 @@ def maximize():
 
 def initialize_charts():
     global fig, ax
-    fig, ax = plt.subplots(len(linde_storage.dtype.names)+2, sharex=True)
+    fig, ax = plt.subplots(len(linde_storage.dtype.names)+3, sharex=True)
     plt.tight_layout()
     plt.xlabel('time [days]')
     for i, s in enumerate(linde_storage.dtype.names):
@@ -627,6 +631,11 @@ def initialize_charts():
     charts['purchased dewars'] = {}
     for d in purchased_dewars_list:
         charts['purchased dewars'][d], = ax[len(linde_storage.dtype.names)+1].plot([], [], linewidth=0.5)
+    ax[len(linde_storage.dtype.names)+2].set_title('experiments')
+    charts['experiments'] = {}
+    for cmms in cmms_list:
+        charts['experiments'][cmms], = ax[len(linde_storage.dtype.names)+2].plot([], [], linewidth=0.5)
+    charts['experiments']['ucn'], = ax[len(linde_storage.dtype.names)+2].plot([], [], linewidth=0.5)
     maximize()
 
 
@@ -639,10 +648,14 @@ def update_charts(step):
     ax[len(linde_storage.dtype.names)].set_ylim(0, inputs.M_portable_dewar_full * 1.05)
     ax[len(linde_storage.dtype.names)+1].set_xlim(0, timestamps_days[step])
     ax[len(linde_storage.dtype.names)+1].set_ylim(0, inputs.M_portable_dewar_full * 1.05)
+    ax[len(linde_storage.dtype.names)+2].set_ylim(0, 2.5)
     for d in dewars_list:
         charts['portable dewars'][d].set_data(timestamps_days[:step], dewar_storage[d][:step])
     for d in purchased_dewars_list:
         charts['purchased dewars'][d].set_data(timestamps_days[:step], purchased_dewar_storage[d][:step])
+    for cmms in cmms_list:
+        charts['experiments'][cmms].set_data(timestamps_days[:step], -cmms_state[cmms][:step])
+    charts['experiments']['ucn'].set_data(timestamps_days[:step], 0.5*ucn_state['static'][:step]+1.0*ucn_state['beam'][:step])
     fig.canvas.draw()
     plt.pause(0.1)
 
@@ -687,5 +700,7 @@ if __name__ == "__main__":
             update_charts(i)
 
     plt.savefig('plot.png')
+
+    print(f'total dewars purchased: {dewars_purchased}')
 
     hash_results([linde_storage, linde_state, dewar_storage, dewar_state, purchased_dewar_storage, cmms_state, ucn_state])

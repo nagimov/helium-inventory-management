@@ -91,6 +91,7 @@ Description of how system elements are modelled:
     + source operation and beam time is taken from schedule
     + liquid helium supply rate is controlled by maintaining liquid helium level in 4K pot
     + when source is running, minimum amount of trickle flow is always maintained to keep the transfer line cold
+        * this amount is such that LHe fully evaporates and becomes 100% saturated vapor after the transfer line  
     + when ucn turns on, initial cooldown period takes place during a specified period of time with increased heat load 
 - Linde 1610 liquefier
     + liquid helium production of the liquefier ramps up gradually after each cooldown

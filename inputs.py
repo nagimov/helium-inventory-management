@@ -17,19 +17,22 @@ t_rampup_linde_cold = 1 * 3600  # time required to ramp linde production from co
 t_rampup_linde_warm = 3 * 3600  # time required to ramp linde production from warm state [s]
 t_linde_warmup_threshold = 2 * 24 * 3600  # max off time after which full warmup needed
 t_linde_warmup = 2 * 24 * 3600  # full warmup time, in addition to the threshold
-V_linde_dewar_min_L = 100  # minimal level in the dewar [L]
+V_linde_dewar_min_safe_L = 100  # minimal safe level in the dewar (stop fills when drops below) [L]
+V_linde_dewar_min_okay_L = 110  # minimal level in the dewar at which fills can be started [L]
 V_linde_dewar_max_L = 900  # maximal level in the dewar [L]
 V_linde_dewar_start_L = 500  # threshold of dewar level for NOT starting linde if it's not running already [L]
 x_linde_dewar_loss_day = 0.5 / 100  # dewar liquid helium loss per day
-x_linde_production_transfer = 10.0 / 100  # reduction of production during transfers
-x_linde_dewar_fill_loss = 47.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
+x_linde_production_transfer_portable = 47.0 / 100  # reduction of production during transfers to portable dewars
+x_linde_dewar_fill_loss = 0.0 / 100  # losses when filling dewars as a fraction of what lands into dewar
+x_linde_production_transfer_ucn = 47.0 / 100  # reduction of production during transfers to ucn cryostat
 v_dewar_fill_run_L_hr = 79.2  # dewar fill flow rate while linde is running [L/hr]
 v_dewar_fill_off_L_hr = 120  # dewar fill flow rate while linde is off [L/hr]
 m_linde_loss_g_s = 0.01  # rate of helium loss when liquefier is running [g/s]
 # liquefier calcs
 d_linde_dewar = d_from_p_sl(p_linde_dewar)  # density of liquid in the dewar [kg/m^3]
 m_linde_dewar = v_linde_dewar_L_hr * 1e-3 / 3600 * d_linde_dewar  # production rate [kg/s]
-M_linde_dewar_min = V_linde_dewar_min_L * 1e-3 * d_linde_dewar  # min amount in the dewar [kg]
+M_linde_dewar_min_safe = V_linde_dewar_min_safe_L * 1e-3 * d_linde_dewar  # min amount in the dewar [kg]
+M_linde_dewar_min_okay = V_linde_dewar_min_okay_L * 1e-3 * d_linde_dewar  # min amount in the dewar [kg]
 M_linde_dewar_max = V_linde_dewar_max_L * 1e-3 * d_linde_dewar  # max amount in the dewar [kg]
 # M_linde_dewar_start: threshold of dewar level for NOT starting linde if it's not running [kg]
 M_linde_dewar_start = V_linde_dewar_start_L * 1e-3 * d_linde_dewar
@@ -81,25 +84,25 @@ m_portable_dewar_loss = x_portable_dewar_loss_day * M_portable_dewar_full / 24 /
 # M_portable_dewar_cooldown: amount of helium required to cool down dewar from warm state [kg]
 M_portable_dewar_cooldown = V_portable_dewar_cooldown_L * 1e-3 * d_portable_dewar  # cool down amount [kg]
 # M_linde_dewar_fill_ok: minimal required level in main dewar to start a fill
-M_linde_dewar_fill_ok = M_linde_dewar_min + M_portable_dewar_topup
+M_linde_dewar_fill_ok = M_linde_dewar_min_safe + M_portable_dewar_topup
 
 # ucn source cryostat data
-m_ucn_static_g_s = 0.77  # flow rate from only static heat load (4K + 1K pots) [g/s]
-m_ucn_beam_g_s = 0.1 * 0.77  # flow rate from only beam loading (4K + 1K pots) [g/s]
-v_transfer_line_L_hr = 70  # flow rate through the transfer line as seen from linde dewar [L/hr]
-P_transfer_line = 6  # heat load to the transfer line [W]
-P_transfer_misc = 0  # heat load from valves, field joints, etc. [W]
+m_ucn_static_L_hr = 12  # flow rate from only static heat load (4K + 1K pots) [L/hr]
+m_ucn_beam_L_hr = 19  # flow rate from only beam loading (4K + 1K pots), adjusted to make the run possible [L/hr]
+v_transfer_line_L_hr = v_dewar_fill_run_L_hr  # flow rate through the transfer line as seen from linde dewar [L/hr]
+P_transfer_line = 0.06 * 40  # heat load to the transfer line [W/m * m = W]
+P_transfer_misc = 0.5 + 1  # heat load from valves, field joints, etc. [W]
 p_ucn_4K = 101325  # pressure in the 4K pot of ucn source
 V_ucn_4K_min_L = 100  # min level in UCN cryostat [L]
 V_ucn_4K_max_L = 180  # max level in UCN cryostat [L]
-x_ucn_cooldown = 1.5  # ucn consumption factor during cooldown
-t_ucn_cooldown_hrs = 72  # ucn cryostat cooldown period [hr]
+x_ucn_cooldown = 35.0/12  # ucn increased consumption factor during cooldown relative to static load
+t_ucn_cooldown_hrs = 48  # ucn cryostat cooldown period [hr]
 # ucn source cryostat calcs
 d_ucn_4K = d_from_p_sl(p_ucn_4K)  # density of liquid in ucn 4K pot [kg/m^3]
 M_ucn_4K_min = V_ucn_4K_min_L * 1e-3 * d_ucn_4K  # min level in UCN cryostat [kg]
 M_ucn_4K_max = V_ucn_4K_max_L * 1e-3 * d_ucn_4K  # max level in UCN cryostat [kg]
-m_ucn_static = m_ucn_static_g_s * 1e-3  # flow rate at static heat load (4K + 1K pots) [kg/s]
-m_ucn_beam = m_ucn_beam_g_s * 1e-3  # flow rate at heat load with beam (4K + 1K pots) [kg/s]
+m_ucn_static = m_ucn_static_L_hr * 1e-3 * d_ucn_4K / 3600  # flow rate at static heat load (4K + 1K pots) [kg/s]
+m_ucn_beam = m_ucn_beam_L_hr * 1e-3 * d_ucn_4K / 3600  # flow rate at heat load with beam (4K + 1K pots) [kg/s]
 # m_transfer_line: flow rate through the transfer line as seen from linde dewar [kg/s]
 m_transfer_line = v_transfer_line_L_hr * 1e-3 * d_linde_dewar / 3600
 P_transfer_total = P_transfer_line + P_transfer_misc  # total heat load to transfer line [W]
