@@ -90,6 +90,8 @@ Description of how system elements are modelled:
     + heat load is beam dependent: static load without beam, full load with beam
     + source operation and beam time is taken from schedule
     + liquid helium supply rate is controlled by maintaining liquid helium level in 4K pot
+        * when level in 4K pot hits the low setpoint, transfer begins at a specified transfer rate
+        * during the cooldown, transfer always happens at max withdrawal rate
     + when source is running, minimum amount of trickle flow is always maintained to keep the transfer line cold
         * this amount is such that LHe fully evaporates and becomes 100% saturated vapor after the transfer line  
     + when ucn turns on, initial cooldown period takes place during a specified period of time with increased heat load 
@@ -98,8 +100,9 @@ Description of how system elements are modelled:
         * ramp values for cooldown from "cold" and "warm" states are specified separately
     + during operation of the liquefier, helium is taken from high-pressure storage and delivered as liquid to dewar
     + when liquefier is off, liquid helium boils off from the main dewar at a specified rate
-    + liquid can be delivered from main dewar to a single user only (portable dewar or ucn cryostat)
-        * trickle-flow to ucn cryostat can be delivered while filling portable dewars
+    + liquid helium can be delivered from main dewar to both ucn cryostat and transport dewars at the same time
+        * total withdrawal rate from the main dewar is limited at a specified rate, during ucn transfers transport dewars are filled at a slower rate
+        * trickle-flow to ucn cryostat is always delivered whenever ucn is on
     + liquefier always starts whenever conditions are appropriate and stops when they aren't
         * enough pressure in high-pressure storage
         * enough free room in main dewar
@@ -112,8 +115,8 @@ Description of how system elements are modelled:
     + dewars that reach 0 level are considered to be warm and require to be cooled down before the next fill
         * during cooldown, liquid helium is transferred to the dewar and then immediately evaporated to the bag
         * cooldown is specified as amount of liquid helium required to transition the dewar from warm to cold state
-    + ucn cryostat fills take priority over dewar fills and can interrupt dewar fills, resulting in partially filled dewars
-        * liquid helium level in a partially filled dewar is above the threshold, it is considered to be ready to be used
+    + ucn cryostat always fills at a specified LHe transfer rate and reduces available fill rate for transport dewars
+        * if liquid helium level in a partially filled dewar is above the threshold, it is considered to be ready to be used
         * if level is below the threshold, dewar is marked as "low" and will be refilled when possible
     + among all the "low" dewars, fill priority is given to the fullest ones in order to create a "full" dewar as
     quickly and cheaply as possible

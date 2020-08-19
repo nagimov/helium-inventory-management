@@ -49,8 +49,8 @@ cmms_state = np.zeros((total_cmms, total_steps), dtype=int)
 cmms_state_logbook = []
 
 ucn_state = np.zeros(total_steps,
-    dtype={'names': ['static', 'beam'],
-         'formats': [bool,     bool]})
+    dtype={'names': ['static', 'beam', 'cooldown'],
+         'formats': [bool,     bool,   bool]})
 ucn_state_logbook = {}
 
 
@@ -119,13 +119,17 @@ def calc_dewar_fill(step, d):
     # returns amount landed into the portable dewar and losses to the bag considering dewar's warm/cold state
     if not dewar_state['fill'][d][step]:
         quit_iteration(step, 'dewar thinks it is being filled while linde disagrees')
-    # define how much is being pushed from main dewar
+    # define how much can be pulled from main dewar
     if linde_state['run'][step]:
-        transfer_to_dewar = inputs.m_dewar_fill_run
-        losses_to_bag = inputs.m_dewar_fill_loss_run
+        max_pull_from_dewar = inputs.m_dewar_pull_run
     else:
-        transfer_to_dewar = inputs.m_dewar_fill_off
-        losses_to_bag = inputs.m_dewar_fill_loss_off
+        max_pull_from_dewar = inputs.m_dewar_pull_off
+    # if filling UCN then transfer to dewar is reduced
+    if linde_state['transfer'][step]:
+        transfer_to_dewar = max_pull_from_dewar - inputs.m_transfer_line
+    else:
+        transfer_to_dewar = max_pull_from_dewar
+    losses_to_bag = inputs.x_linde_dewar_fill_loss * transfer_to_dewar
     # if cooldown amount wasn't delivered, dewar is still "warm"
     if dewar_cooldown[d] < 0:
         print(d, dewar_cooldown[d])
@@ -133,19 +137,6 @@ def calc_dewar_fill(step, d):
         return 0, transfer_to_dewar + losses_to_bag
     else:
         return transfer_to_dewar, losses_to_bag
-
-
-def calc_ucn_load(step):
-    # returns static heat load of ucn cryostat considering cooldown mode
-    assert ucn_state['static'][step]  # make sure ucn is at static heat load
-    started = ucn_state_logbook['static_1']
-    since_start = timestamps[step] - timestamps[started]
-    load_mult = 1.0
-    if since_start < inputs.t_ucn_cooldown:  # if in cooldown mode
-        if ucn_state['beam'][step]:  # if trying to run beam while in cooldown mode
-            quit_iteration(step, 'trying to run beam to ucn in cooldown mode')
-        load_mult = inputs.x_ucn_cooldown
-    return load_mult * inputs.m_ucn_static
 
 
 def calc_linde_production(step):
@@ -162,10 +153,10 @@ def calc_linde_production(step):
     ramp_mult = min(since_start / t_rampup, 1.0)
     # adjust production during transfers
     transfer_mult = 1.0
-    if linde_state['transfer'][step]:
-        transfer_mult = 1.0 - inputs.x_linde_production_transfer_ucn
     if linde_state['filling'][step]:
-        transfer_mult = 1.0 - inputs.x_linde_production_transfer_portable
+        transfer_mult = 1.0 - inputs.x_linde_production_transfer / inputs.m_dewar_pull_run * inputs.m_transfer_line
+    if linde_state['transfer'][step]:
+        transfer_mult = 1.0 - inputs.x_linde_production_transfer
     return inputs.m_linde_dewar * ramp_mult * transfer_mult
 
 
@@ -196,9 +187,15 @@ def op_linde(step):
         linde_storage['dewar'][step] -= (to_portable_dewar + to_bag) * dt
     # filling ucn cryostat
     if linde_state['transfer'][step]:
-        linde_storage['dewar'][step] -= (inputs.m_transfer_line + inputs.m_transfer_line_loss) * dt
-        linde_storage['bag'][step] += inputs.m_transfer_line_loss * dt
-        linde_storage['ucn'][step] += inputs.m_transfer_line * dt
+        # during cooldown, fill with max flow
+        if ucn_state['cooldown'][step]:
+            ucn_transfer = inputs.m_dewar_pull_run
+        else:
+            ucn_transfer = inputs.m_transfer_line
+        ucn_transfer_loss = inputs.m_vapor_ucn_4K_Q + inputs.x_vapor_ucn_4K_JT * ucn_transfer
+        linde_storage['dewar'][step] -= (ucn_transfer + ucn_transfer_loss) * dt
+        linde_storage['bag'][step] += ucn_transfer_loss * dt
+        linde_storage['ucn'][step] += ucn_transfer * dt
     if linde_state['transfer_trickle'][step]:
         # check if static load flow is enough to keep transfer line cold
         extra_flow = max(inputs.m_transfer_line_trickle - inputs.m_ucn_static, 0)
@@ -229,8 +226,14 @@ def op_hp_compressors(step):
 
 def op_ucn(step):
     # evaporation from heat loads
+    if ucn_state['cooldown'][step]:
+        ucn_flow = inputs.m_ucn_cooldown * dt
+        linde_storage['ucn'][step] -= ucn_flow
+        if linde_storage['ucn'][step] < 0:
+            linde_storage['ucn'][step] = 0
+        linde_storage['bag'][step] += ucn_flow
     if ucn_state['static'][step]:
-        ucn_flow = calc_ucn_load(step) * dt
+        ucn_flow = inputs.m_ucn_static * dt
         linde_storage['ucn'][step] -= ucn_flow
         linde_storage['bag'][step] += ucn_flow
     if ucn_state['beam'][step]:
@@ -327,6 +330,13 @@ def is_this_thing_on(step, thing):
 def set_ucn_states(step):
     ucn_state['static'][step] = is_this_thing_on(step, 'ucn_source')
     ucn_state['beam'][step] = is_this_thing_on(step, 'ucn_beam')
+    if ucn_state['static'][step-1]:
+        started = ucn_state_logbook['static_1']
+        since_start = timestamps[step-1] - timestamps[started]
+        if since_start < inputs.t_ucn_cooldown:  # if in cooldown mode
+            ucn_state['cooldown'][step] = True
+        else:
+            ucn_state['cooldown'][step] = False
 
 
 def purchase_dewar(step):
@@ -655,7 +665,8 @@ def update_charts(step):
         charts['purchased dewars'][d].set_data(timestamps_days[:step], purchased_dewar_storage[d][:step])
     for cmms in cmms_list:
         charts['experiments'][cmms].set_data(timestamps_days[:step], -cmms_state[cmms][:step])
-    charts['experiments']['ucn'].set_data(timestamps_days[:step], 0.5*ucn_state['static'][:step]+1.0*ucn_state['beam'][:step])
+    charts['experiments']['ucn'].set_data(timestamps_days[:step],
+        0.5*ucn_state['static'][:step]+1.0*ucn_state['beam'][:step]+1.5*ucn_state['cooldown'][:step])
     fig.canvas.draw()
     plt.pause(0.1)
 
