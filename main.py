@@ -30,6 +30,7 @@ linde_state = np.zeros(total_steps,
     dtype={'names': ['run', 'warmup', 'hp_comp_1', 'hp_comp_2', 'hp_comp_3', 'transfer', 'transfer_trickle', 'filling'],
          'formats': [bool,  bool,     bool,        bool,        bool,        bool,       bool,               bool]}
 )
+linde_production = np.zeros(total_steps, dtype=float)
 linde_state_logbook = {}
 
 dewar_storage = np.zeros((inputs.N_dewars, total_steps), dtype=float)
@@ -157,6 +158,8 @@ def calc_linde_production(step):
         transfer_mult = 1.0 - inputs.x_linde_production_transfer / inputs.m_dewar_pull_run * inputs.m_transfer_line
     if linde_state['transfer'][step]:
         transfer_mult = 1.0 - inputs.x_linde_production_transfer
+    # convert from kg/s back to L/hr for the chart
+    linde_production[step] = inputs.m_linde_dewar * ramp_mult * transfer_mult / 1e-3 * 3600 / inputs.d_linde_dewar
     return inputs.m_linde_dewar * ramp_mult * transfer_mult
 
 
@@ -627,7 +630,7 @@ def maximize():
 
 def initialize_charts():
     global fig, ax
-    fig, ax = plt.subplots(len(linde_storage.dtype.names)+3, sharex=True)
+    fig, ax = plt.subplots(len(linde_storage.dtype.names)+4, sharex=True)
     plt.tight_layout()
     plt.xlabel('time [days]')
     for i, s in enumerate(linde_storage.dtype.names):
@@ -646,6 +649,8 @@ def initialize_charts():
     for cmms in cmms_list:
         charts['experiments'][cmms], = ax[len(linde_storage.dtype.names)+2].plot([], [], linewidth=0.5)
     charts['experiments']['ucn'], = ax[len(linde_storage.dtype.names)+2].plot([], [], linewidth=0.5)
+    ax[len(linde_storage.dtype.names)+3].set_title('linde production')
+    charts['linde production'], = ax[len(linde_storage.dtype.names)+3].plot([], [], linewidth=0.5)
     maximize()
 
 
@@ -659,6 +664,7 @@ def update_charts(step):
     ax[len(linde_storage.dtype.names)+1].set_xlim(0, timestamps_days[step])
     ax[len(linde_storage.dtype.names)+1].set_ylim(0, inputs.M_portable_dewar_full * 1.05)
     ax[len(linde_storage.dtype.names)+2].set_ylim(0, 2.5)
+    ax[len(linde_storage.dtype.names)+3].set_ylim(0, inputs.v_linde_dewar_L_hr + 10)
     for d in dewars_list:
         charts['portable dewars'][d].set_data(timestamps_days[:step], dewar_storage[d][:step])
     for d in purchased_dewars_list:
@@ -667,6 +673,7 @@ def update_charts(step):
         charts['experiments'][cmms].set_data(timestamps_days[:step], -cmms_state[cmms][:step])
     charts['experiments']['ucn'].set_data(timestamps_days[:step],
         0.5*ucn_state['static'][:step]+1.0*ucn_state['beam'][:step]+1.5*ucn_state['cooldown'][:step])
+    charts['linde production'].set_data(timestamps_days[:step], linde_production[:step])
     fig.canvas.draw()
     plt.pause(0.1)
 
